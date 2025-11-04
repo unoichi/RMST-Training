@@ -1,4 +1,6 @@
 # RMST-Training
+Presentation slides and materials for RMST training.
+
 | File or Folder | Description|
 |------|-----|
 |Part1-01.pdf| Training slides to introduce concepts|
