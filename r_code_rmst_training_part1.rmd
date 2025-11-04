@@ -1,0 +1,73 @@
+---
+title: "R code to complement RMST Training - Part 1"
+output: 
+  html_document:
+    toc: true
+    self_contained: true
+---
+
+
+# Load packages
+```{r}
+library(tidyverse)
+library(survminer)
+library(devtools)
+devtools::install_github("uno1lab/survRM2")
+library(survRM2)
+```
+
+
+# Data set-up
+```{r}
+data(pbc, package="survival")
+df <- pbc %>%
+  filter(!is.na(trt)) %>%
+  mutate(status = if_else(status==2, 1, 0),
+         arm = if_else(trt==1, 1, 0),
+         time = time / 365.25) %>%
+  select(id, time, status, arm, age, edema, bili, albumin, protime)
+```
+
+# Review dataset
+```{r}
+head(df)
+```
+
+# Kaplan-Meier plot
+```{r}
+ggsurvplot(survfit(Surv(time, status) ~ arm, data=df), 
+           data = df, legend.title = "", 
+           risk.table = TRUE, 
+           xlim = c(0, 14), 
+           break.x.by=2,
+           ggtheme = theme_bw())
+```
+
+
+# Unadjusted analysis of RMST by study arm, using a trunction timepoint of 10 years.
+```{r}
+result <- rmst2(time=df$time,     # analysis time
+                status=df$status, # event indicator
+                arm=df$arm,       # study arm (independent variable of interest)
+                tau=10)           # truncation time
+```
+
+# Table of summary statistics
+```{r}
+print(result)
+```
+
+# Visualization of RMST and RMTL
+```{r}
+plot(result)
+```
+
+# Exercise: treatment discontinuation data
+
+Read in data:
+```{r}
+df <- read.csv("training_data/Schadendorf-OS.csv")
+```
+
+# Analysis of RMST using treatment discontinuation data
+(to be completed in training)
