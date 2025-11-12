@@ -1,0 +1,156 @@
+---
+title: "R code to complement RMST Training - Part 2"
+output: 
+  html_document:
+    toc: true
+    self_contained: true
+---
+
+
+# Load packages
+```{r}
+library(tidyverse)
+library(survminer)
+library(gt)
+library(devtools)
+devtools::install_github("uno1lab/survRM2")
+library(survRM2)
+```
+
+
+# Data set-up
+```{r}
+data(pbc, package="survival")
+df <- pbc %>%
+  filter(!is.na(trt)) %>%
+  mutate(status = if_else(status==2, 1, 0),
+         arm = if_else(trt==1, 1, 0),
+         time = time / 365.25) %>%
+  select(id, time, status, arm, age, edema, bili, albumin, protime)
+```
+
+# Unadjusted two sample analysis
+```{r}
+result1 <- rmst2(time=df$time,     # analysis time
+                status=df$status, # event indicator
+                arm=df$arm,       # study arm (independent variable of interest)
+                tau=10)           # truncation time
+```
+
+
+
+# Adjusted analysis (adjusted for age, bilirubin, albumun).
+```{r}
+covdf <- df[, c("age", "bili", "albumin")]
+result2 <- rmst2(time=df$time, 
+                 status=df$status, 
+                 arm=df$arm,
+                 covariates=covdf,
+                 tau=10)
+```
+
+# Adjusted analysis - Table of summary statistics
+```{r}
+print(result2)
+```
+
+# Comparison of unadjusted and unadjusted results for RMST difference
+
+**Unadjusted**
+```{r}
+as.data.frame(result1$unadjusted.result) %>% 
+  gt(rownames_to_stub = TRUE) %>%
+  fmt_number(columns = everything(), decimals = 3)
+```
+
+**Adjusted**
+```{r}
+as.data.frame(result2$RMST.difference.adjusted) %>% 
+  gt(rownames_to_stub = TRUE) %>%
+  fmt_number(columns = everything(), decimals = 3)
+```
+
+
+# Stratified analysis setup
+```{r}
+devtools::install_github("zrmacc/StratSurv")
+library(StratSurv)
+df_strata <- read.csv("training_data/keynote189-stratified.csv")
+```
+
+# Example data for the stratified analysis
+```{r}
+head(df_strata)
+table(df_strata$stratum)
+```
+
+# Kaplan-Meier plot for all participants
+```{r}
+ggsurvplot(survfit(Surv(time, status) ~ arm, data=df), 
+           data = df, legend.title = "", 
+           risk.table = TRUE, 
+           xlim = c(0, 18), 
+           break.x.by=3,
+           ggtheme = theme_bw())
+```
+
+# Kaplan-Meier plots stratified by tumor proportion score
+```{r}
+mk_plot <- function(d, label) { 
+  fit <- survfit(Surv(time, status) ~ arm, data = d) 
+  ggsurvplot(fit, data = d, legend.title = "", risk.table = TRUE, 
+             xlim = c(0, 18), break.x.by = 3, 
+             ggtheme = theme_bw(), title = label ) 
+  }
+p0 <- mk_plot(subset(df_strata, stratum == 0), "Stratum = 0") 
+p1 <- mk_plot(subset(df_strata, stratum == 1), "Stratum = 1") 
+p2 <- mk_plot(subset(df_strata, stratum == 2), "Stratum = 2")
+arrange_ggsurvplots(list(p0, p1, p2), ncol = 3, nrow = 1)
+```
+
+# Unadjusted analysis of RMST by study arm, stratified by tumor proportion score, using a trunction timepoint of 18 months.
+```{r}
+result <- StratRMST(time = df_strata$time,
+                    status = df_strata$status,
+                    arm = df_strata$arm,
+                    strata = df_strata$stratum,
+                    tau = 18)
+```
+
+# Stratified analysis - Default table of summary statistics
+
+```{r}
+print(result)
+```
+
+# Within-stratum estimates of RMST by study arm:
+
+```{r}
+result@Stratified
+```
+
+# Stratum-sized weighted-averages of RMST by study arm and underlying weights:
+
+```{r}
+result@Marginal
+```
+
+```{r}
+result@Weights
+```
+
+# Between-group differences of RMST from stratified analysis:
+
+```{r}
+result@Contrasts
+```
+
+# Exercise: Regression analysis 
+
+Read in data:
+```{r}
+df <- read.csv("training_data/rmst-regression-example-data.csv")
+```
+
+# Adjusted analysis 
+(to be completed in training)

@@ -1,0 +1,21 @@
+* load PBC data
+clear
+use "http://people.umass.edu/biep640w/datasets/pbc.dta", clear
+
+* relabel and recode variables to mimic variable names and values in R
+rename status status_temp
+g status = status_temp==1
+g treatment = rx==0
+rename years time
+rename bilirubin bili
+rename number id
+keep status treatment time age bili albumin
+
+* install commands to implement RMST
+ssc install strmst2
+
+* declare data survival-time
+stset time, f(status)
+
+* adjusted analysis by treatment group with tau=10
+strmst2 treatment, covariates(age bili albumin) tau(10) rmtl

@@ -1,0 +1,17 @@
+* import PBC data after basic data manipulation performed in R;
+* update path to datafile as necessary;
+proc import datafile='C:/training-part1/training_data/pbc_example_data.csv'
+  out=work.pbc
+  dbms=csv
+  replace;
+run;
+
+* adjusted analysis by treatment group with tau=10;
+proc rmstreg data=pbc tau=10;
+   class arm(ref='0');
+   model time*status(0) = arm age bili albumin / link=linear　
+   method=ipcw(strata=arm) ;
+run;
+
+
+
