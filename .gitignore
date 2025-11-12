@@ -50,3 +50,4 @@ rsconnect/
 
 # PPT versions of presentations
 *.pptx
+.DS_Store
